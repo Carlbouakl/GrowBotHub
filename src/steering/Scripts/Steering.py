@@ -9,7 +9,7 @@ def initialize_motors(self):
 
 def move(self, position, id):   #TODO: Integrate in a class
     hexposition = self.hexSwapperTool(position)
-    msg = str(hexposition) + canConfig.Post_Position_2 # '00001F00'
+    msg = str(hexposition) +  # '00001F00'
     arrayData = self.parseHex(msg)
     canMessage = can.Message(self, extended_id=False, arbitration_id=id, data=arrayData)
     self.canSendMessage(canMessage)
