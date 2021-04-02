@@ -8,9 +8,12 @@ project(safety)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
+	message_generation
   roscpp
   rospy
-  std_msgs
+	sensor_msgs
+	std_msgs
+	std_srvs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -54,11 +57,11 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
+add_service_files(
+		FILES
+    SafetySRV.srv
 #   Service2.srv
-# )
+)
 
 ## Generate actions in the 'action' folder
 # add_action_files(

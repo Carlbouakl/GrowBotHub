@@ -5,10 +5,10 @@ import numpy as np
 import rospy
 import smach
 import smach_ros
-import SHELF as shelf
-import AUTOMATEDPLATFORM as AP
-import GROWTHMODULE as growth_module
-import ROBOTICARM as RS # Robotic Station
+from ShelfClass import SHELF as shelf
+from AutomatedPlatformClass import AUTOMATEDPLATFORM as AP
+from GrowthModuleClass import GROWTHMODULE as growth_module
+from RoboticPlatformClass import ROBOTICARM as RS # Robotic Station
 
 ## TODO: create check_for_safety_error service on ROS
 ## TODO: create a move function
@@ -38,19 +38,19 @@ class Homing(smach.State):
         moving_result = move(home_position)
         if check_for_safety_error():
             wait_for_solve(reason = 'safety')
-            return ('repeat_homing')
+            return ('error')
 
         elif moving_result == 'Paused':
             wait_for_solve(reason='pause')
-            return ('repeat_homing')
+            return ('error')
 
         elif moving_result != 'The position is reached':
             wait_for_solve(reason= 'moving_service_error')
-            return ('repeat_homing')
+            return ('error')
         else:
             wait_for_start()
             AP.Pose = home_position
-            return ('go_to_growth_module') # TODO: Rename this accroding to what the name of the next state is
+            return ('sucess') # TODO: Rename this accroding to what the name of the next state is
 
 
 class GoToGrowthModule(smach.State):
@@ -75,7 +75,7 @@ class GoToGrowthModule(smach.State):
                 return 'error'
             else:
                 AP.Pose = growth_module.Location(userdata)
-                return'pick_growth_module'
+                return'sucess'
 
 
 class PickGrowthModule(smach.State):
@@ -206,14 +206,14 @@ class DepositShelf(smach.State):
 
 def main():
     rospy.init_node('GrowBotHub')
-    sm = smach.StateMachine(outcomes=['finished'])     # Create a SMACH state machine
+    sm = smach.StateMachine(outcomes=['finished','success','error'])     # Create a SMACH state machine
 
     with sm:
 
         smach.StateMachine.add('Init', Initialization(),
                                transitions={'start_homing': 'Homing'}, remapping={})
         smach.StateMachine.add('Homing', Homing(),
-                               transitions={'repeat_homing': 'go_to_growth_module'}, remapping={})
+                               transitions={'success': 'error'}, remapping={})
 
         sis = smach_ros.IntrospectionServer('server_name', sm, '/GrowBotHubProcess') # Create and start the introspection server
         sis.start()
