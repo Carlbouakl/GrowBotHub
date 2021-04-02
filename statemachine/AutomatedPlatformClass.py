@@ -7,7 +7,7 @@ class AUTOMATEDPLATFORM:
     """INITIALIZATION"""
     def __init__(self):
         self.Pose # Location in x,y,z and yaw
-        self.Loaded = 0 # Carrying Growth module or not
+        self.Loaded = False # Carrying Growth module or not
         self.Status = 'Standby' # Moving or Standby
 
 

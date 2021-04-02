@@ -2,23 +2,20 @@
 import os
 import numpy as np
 
-class GROWTHMODULE:
+class ROBOTICARM:
 
     """INITIALIZATION"""
     def __init__(self):
-        self.ID
-        self.Plants
-        self.Capacity
-        self.Status
-        self.Weight
-        self.Dimensions
+        self.NbrGrowthModules = 0
+        self.Status = 'Free' # Free or busy
+        self.Countdown = 0 # Time it needs to finish job
 
 
     """CLASS METHODS/FUNCTIONS"""
-    def move(self):
+    def harvest(self):
         pass
 
 
 """ LISTENER """
 if __name__ == "__main__":
-    print('GROWTH_MODULE_CLASS')
+    print('KUKA_CLASS')
