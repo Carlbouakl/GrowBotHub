@@ -21,7 +21,7 @@ def handle_safety(request):
 def safety_server():
     """This function initiates the safety service."""
     rospy.init_node('safety_detection_server')
-    service = rospy.Service('Safety_Detection', SafetySRV, handle_safety)
+    service = rospy.Service('Safety_Detection', SafetySRV, Safety)
     rospy.loginfo('Starting Service Safety_Scan.')
     rospy.spin()
 

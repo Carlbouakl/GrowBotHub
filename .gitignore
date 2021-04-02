@@ -9,6 +9,7 @@
 *.h5
 .jpg
 .png
+.pyc
 
 # Linker output
 *.ilk
@@ -43,7 +44,7 @@
 # Ignore ROS folders
 /build
 /devel
-
+/src/executive_smach_visualization
 
 # Debug files
 *.dSYM/

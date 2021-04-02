@@ -3,6 +3,25 @@
 import os
 import can
 
+
+
+def safety_SM(self, req):
+    global safety
+    if req.input == 1:
+        safety.send_message()
+        return SafetyResponse(error=False)
+    elif req.input == 0:
+        if safety.current_error is not None and (safety.current_error[4] == 'True' or safety.es == 1):    # error due to safety not directly from the beginning
+            return SafetyResponse(error=True)
+
+        else:
+            # print'Returning Error False'
+            return SafetyResponse(error=False)
+    else:
+        return SafetyResponse(safety_issue_1=safety.error_msg_18, safety_issue_2=safety.error_msg)
+
+
+
 def initialize_motors(self):
     hex = rospy.get_param('CAN_INITIALIZE_MOTORS')
     self.canSendMessage(canMessage)

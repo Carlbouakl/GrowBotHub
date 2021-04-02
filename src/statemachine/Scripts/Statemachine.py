@@ -5,6 +5,7 @@ import numpy as np
 import rospy
 import smach
 import smach_ros
+from logic import *
 from ShelfClass import SHELF as shelf
 from AutomatedPlatformClass import AUTOMATEDPLATFORM as AP
 from GrowthModuleClass import GROWTHMODULE as growth_module
@@ -20,37 +21,38 @@ class Initialization(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=['start_homing'], input_keys=[], output_keys=[])
 
-    def execute(self, userdata):
+    def execute(self,userdata):
         userdata.test = rospy.get_param('TARE_WEIGHT') # Load parameters and classes here
 
         # handle safety errors that are present on startup
         if check_for_safety_error():
             wait_for_solve(reason='safety')
 
-        return ('start_homing')
+        return 'start_homing'
 
 
 class Homing(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=['success','error'], input_keys=[], output_keys=[])
 
-    def execute(self):
-        moving_result = move(home_position)
+    def execute(self, userdata):
+        # moving_result = move(home_position)
+        print("Moving")
         if check_for_safety_error():
             wait_for_solve(reason = 'safety')
-            return ('error')
+            return 'error'
 
-        elif moving_result == 'Paused':
-            wait_for_solve(reason='pause')
-            return ('error')
+        # elif moving_result == 'Paused':
+        #     wait_for_solve(reason='pause')
+        #     return 'error'
 
-        elif moving_result != 'The position is reached':
-            wait_for_solve(reason= 'moving_service_error')
-            return ('error')
+        # elif moving_result != 'The position is reached':
+        #     wait_for_solve(reason= 'moving_service_error')
+        #     return 'error'
         else:
             wait_for_start()
             AP.Pose = home_position
-            return ('sucess') # TODO: Rename this accroding to what the name of the next state is
+            return 'success' # TODO: Rename this accroding to what the name of the next state is
 
 
 class GoToGrowthModule(smach.State):
@@ -206,22 +208,19 @@ class DepositShelf(smach.State):
 
 def main():
     rospy.init_node('GrowBotHub')
-    sm = smach.StateMachine(outcomes=['finished','success','error'])     # Create a SMACH state machine
+    sm = smach.StateMachine(outcomes=['finished'])     # Create a SMACH state machine
 
     with sm:
 
-        smach.StateMachine.add('Init', Initialization(),
-                               transitions={'start_homing': 'Homing'}, remapping={})
-        smach.StateMachine.add('Homing', Homing(),
-                               transitions={'success': 'error'}, remapping={})
-
+        smach.StateMachine.add('Init', Initialization(), transitions={'start_homing': 'Homing'}, remapping={})
+        smach.StateMachine.add('Homing', Homing(), transitions={'success': 'Homing', 'error': 'Init'}, remapping={})
+        rospy.sleep(10)
         sis = smach_ros.IntrospectionServer('server_name', sm, '/GrowBotHubProcess') # Create and start the introspection server
         sis.start()
 
         outcome = sm.execute()  # Execute SMACH plan
         rospy.spin()
         sis.stop()
-
 
 """ LISTENER """
 if __name__ == '__main__':
