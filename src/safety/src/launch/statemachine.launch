@@ -1,0 +1,8 @@
+<launch>
+    # launch paramerter launch file
+    <rosparam command="load" file="$(find safety)/yaml/params.yaml" />
+
+    # start Retinanet Service service
+    <node name="safety" pkg="safety" type="Statemachine.pye.py" respawn="true" output="screen" />
+
+</launch>
