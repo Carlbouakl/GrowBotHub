@@ -1,5 +1,5 @@
 <launch>
-    # launch paramerter launch file
+    # launch parameter launch file
     <rosparam command="load" file="$(find statemachine)/yaml/params.yaml" />
 
     # start Retinanet Service service

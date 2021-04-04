@@ -5,11 +5,11 @@ import numpy as np
 import rospy
 import smach
 import smach_ros
-from logic import *
-from ShelfClass import SHELF as shelf
-from AutomatedPlatformClass import AUTOMATEDPLATFORM as AP
-from GrowthModuleClass import GROWTHMODULE as growth_module
-from RoboticPlatformClass import ROBOTICARM as RS # Robotic Station
+import logic
+from Shelf import Shelf as shelf
+from AutomatedPlatform import AutomatedPlatform as AP
+from GrowthModule import GrowthModule as growth_module
+from RoboticStation import RoboticStation as RS # Robotic Station
 
 ## TODO: create check_for_safety_error service on ROS
 ## TODO: create a move function
@@ -51,7 +51,7 @@ class Homing(smach.State):
         #     return 'error'
         else:
             wait_for_start()
-            AP.Pose = home_position
+            AP.position = home_position
             return 'success' # TODO: Rename this accroding to what the name of the next state is
 
 
@@ -61,38 +61,39 @@ class GoToGrowthModule(smach.State):
         smach.State.__init__(self, outcomes=['success','error'], input_keys=[], output_keys=[])
 
     def execute(self, userdata): # userdata has the growth_module.ID and the location you want to go to
-        if shelf.Occupancy(userdata.ID) == False:
+        #REMARK: occupancy could be an array of growthModule=> set to None if no growthModule
+        if shelf.occupancy(userdata.ID) == False:
             print('Growth Module in this location does not exist')
             return 'error'
-        elif AP.Status == 'Busy':
+        elif AP.status == 'Busy':
             print('Automated platform is already doing a job')
             return 'error'
-        elif userdata.pose > shelf.Dimension:
+        elif userdata.position > shelf.dimension:
             print('Growth module outside the shelf')
             return 'error'
         else:
-            moving_result = move(growth_module.Location(userdata)) ## TODO: Put the coordinates of the growth Module
+            moving_result = move(growth_module.location(userdata)) ## TODO: Put the coordinates of the growth Module
             if check_for_safety_error():
                 wait_for_solve(reason = 'safety')
                 return 'error'
             else:
-                AP.Pose = growth_module.Location(userdata)
+                AP.position = growth_module.location(userdata)
                 return'sucess'
 
 
-class PickGrowthModule(smach.State):
+class PickFromShelf(smach.State):
 
     def __init__(self):
         smach.State.__init__(self, outcomes=['success','error'], input_keys=[], output_keys=[])
 
     def execute(self, userdata): # userdata has the growth_module.ID
-        if shelf.Occupancy(userdata) == False:
+        if shelf.occupancy(userdata) == False:
             print('Growth Module in this location does not exist')
             return 'error'
-        elif AP.Pose != userdata: # i.e, the automated platform is not in the proper location
+        elif AP.position != userdata: # i.e, the automated platform is not in the proper location
             print('Automated platform is not in the correct position')
             return 'error'
-        if AP.Loaded == 1:
+        if AP.loaded == True:
             print('Automated Platform is already carrying a Growth Module')
             return 'error'
         else:
@@ -101,9 +102,9 @@ class PickGrowthModule(smach.State):
                 wait_for_solve(reason = 'safety')
                 return 'error'
             else:
-                AP.Loaded == 1
-                AP.Status == 'Moving'
-                shelf.Occupancy = 0 # TODO: Fix this to decide which growth module is 0 or 1 (and fix below)
+                AP.loaded = True
+                AP.status = 'Moving'
+                shelf.occupancy = 0 # TODO: Fix this to decide which growth module is 0 or 1 (and fix below)
                 return 'go_to_robotic_station'
 
 class GoToRoboticStation(smach.State):
@@ -112,13 +113,13 @@ class GoToRoboticStation(smach.State):
         smach.State.__init__(self, outcomes=['success','error'], input_keys=[], output_keys=[])
 
     def execute(self, userdata): # userdata has the growth_module.ID
-        if AP.Loaded == 0:
+        if AP.loaded == False:
             print('Automated Platform is not carrying a Growth Module')
             return 'error'
-        elif AP.Pose != userdata: # i.e, the automated platform is not in the proper location ## TODO: Check for positon, not userdata
+        elif AP.pose != userdata: # i.e, the automated platform is not in the proper location ## TODO: Check for positon, not userdata
             print('Automated platform is not in the correct position')
             return 'error'
-        elif RS.Status == 'Busy':
+        elif RS.status == 'Busy':
             print('Robotic Station does not have space for an additional growth module')
             return 'error'
         else:
@@ -127,7 +128,7 @@ class GoToRoboticStation(smach.State):
                 wait_for_solve(reason = 'safety')
                 return 'error'
             else:
-                AP.Pose = RS_position ## TODO: ROS params define a location for this
+                AP.position = RS_position ## TODO: ROS params define a location for this
                 return 'deposit_roboti_station'
 
 class DepositRoboticStation(smach.State):
@@ -136,10 +137,10 @@ class DepositRoboticStation(smach.State):
         smach.State.__init__(self, outcomes=['success','error'], input_keys=[], output_keys=[])
 
     def execute(self, userdata): # userdata has the growth_module.ID
-        if RS.Status == 'Busy':
+        if RS.status == 'Busy':
             print('Robotic Station does not have space for an additional growth module')
             return 'error'
-        elif AP.Pose != RS_position: # i.e, the automated platform is not in the proper location
+        elif AP.position != RS_position: # i.e, the automated platform is not in the proper location
             print('Automated platform is not in the correct position')
             return 'error'
         else:
@@ -148,8 +149,8 @@ class DepositRoboticStation(smach.State):
                 wait_for_solve(reason = 'safety')
                 return 'error'
             else:
-                AP.Pose = RS_position ## TODO: ROS params define a location for this
-                AP.Status = 'Standby'
+                AP.position = RS_position ## TODO: ROS params define a location for this
+                AP.status = 'Standby'
                 return 'wait'
 
 class Wait(smach.State):
@@ -165,10 +166,10 @@ class PickFromRoboticStation(smach.State):
         smach.State.__init__(self, outcomes=['success','error'], input_keys=[], output_keys=[])
 
     def execute(self, userdata): # userdata has the growth_module.ID
-        if AP.Status == 'Busy':
+        if AP.status == 'Busy':
             print('Automated platform is already doing a job')
             return 'error'
-        elif AP.Pose != RS_position: # i.e, the automated platform is not in the proper location
+        elif AP.position != RS_position: # i.e, the automated platform is not in the proper location
             print('Automated platform is not in the correct position')
             return 'error'
         else:
@@ -177,9 +178,9 @@ class PickFromRoboticStation(smach.State):
                 wait_for_solve(reason = 'safety')
                 return 'error'
             else:
-                AP.Loaded = True
-                RS.NbrGrowthModules = RS.NbrGrowthModules - 1 ## TODO: Track which growth module space is unloaded
-                self.Status = 'Free'
+                AP.loaded = True
+                RS.growthModuleCount -=1 ## TODO: Track which growth module space is unloaded
+                self.status = 'Free'
                 return 'go_to_growth_module'
 
 class DepositShelf(smach.State):
@@ -188,10 +189,10 @@ class DepositShelf(smach.State):
         smach.State.__init__(self, outcomes=['success','error'], input_keys=[], output_keys=[])
 
     def execute(self, userdata): # userdata has the growth_module.ID
-        if shelf.Occupancy(userdata) == True:
+        if shelf.occupancy(userdata) == True:
             print('Growth Module in this location is already there')
             return 'error'
-        elif AP.Pose != userdata: # i.e, the automated platform is not in the proper location
+        elif AP.position != userdata: # i.e, the automated platform is not in the proper location
             print('Automated platform is not in the correct position')
             return 'error'
         else:
@@ -200,9 +201,9 @@ class DepositShelf(smach.State):
                 wait_for_solve(reason = 'safety')
                 return 'error'
             else:
-                AP.Loaded == 0
-                AP.Status == 'Standby'
-                shelf.Occupancy= 1
+                AP.loaded = False
+                AP.status == 'Standby'
+                shelf.occupancy= 1
                 return 'go_to_home_position'
 
 
